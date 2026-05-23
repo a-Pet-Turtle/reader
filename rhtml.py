@@ -7,6 +7,7 @@ developed by StarShot Studios
 
 import urllib.request
 import webbrowser
+from html.parser import HTMLParser
 from . import rfiles
 
 def get(url):
@@ -118,3 +119,37 @@ def openhtml(filename):
             return True
         except:
             return False
+
+
+class DictParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.elements = []
+        self.current_tag = None
+        self.current_attrs = {}
+
+    def handle_starttag(self, tag, attrs):
+        self.current_tag = tag
+        self.current_attrs = dict(attrs)  # converts [("href", "...")] to {"href": "..."}
+
+    def handle_data(self, data):
+        data = data.strip()
+        if data and self.current_tag:
+            entry = {
+                "type": self.current_tag,
+                "text": data,
+            }
+            if "href" in self.current_attrs:
+                entry["href"] = self.current_attrs["href"]
+            self.elements.append(entry)
+
+    def handle_endtag(self, tag):
+        self.current_tag = None
+        self.current_attrs = {}
+
+def parse(url):
+    from reader import rhtml
+    html = rhtml.get(url)
+    parser = DictParser()
+    parser.feed(html)
+    return parser.elements
